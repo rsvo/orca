@@ -142,7 +142,7 @@ export default function GitHubItemDialog({
     <div className="flex h-full min-h-0 flex-col">
       {isIssuePage ? (
         <GitHubItemDialogIssueHeader
-          workItem={workItem}
+          workItem={displayWorkItem ?? workItem}
           backLabel={backLabel}
           onClose={onClose}
           linkCopied={linkCopied}

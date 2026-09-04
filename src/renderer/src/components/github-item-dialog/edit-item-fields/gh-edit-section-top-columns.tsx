@@ -4,9 +4,12 @@ import type { GitHubAssignableUser } from '../../../../../shared/github/pull-req
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskPageGitHubCloseAction } from '@/components/task-page-github-status-actions'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import { GHEditSectionStatusPopover } from './gh-edit-section-status-popover'
 import { GHEditSectionAssigneesColumn } from './gh-edit-section-assignees'
 import { GHEditSectionLabelsColumn } from './gh-edit-section-labels'
+import { isGitHubIssueBlocked } from '@/components/github/github-issue-blocked-presentation'
+import { GitHubIssueBlockedByRelationships } from '@/components/github/GitHubIssueBlockedIndicators'
 
 export function GHEditSectionTopColumns({
   item,
@@ -74,8 +77,17 @@ export function GHEditSectionTopColumns({
   onLabelToggle: (label: string) => void
 }): React.JSX.Element {
   // Why: lay property fields as top columns so the description isn't squeezed by a right rail.
+  // Why: Relationships mirrors GitHub's issue sidebar when the payload includes blockers.
+  const showRelationships = isGitHubIssueBlocked(item)
   return (
-    <aside className="grid grid-cols-2 gap-x-6 gap-y-5 text-[13px] sm:grid-cols-4">
+    <aside
+      className={cn(
+        'grid gap-x-6 gap-y-5 text-[13px]',
+        showRelationships
+          ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+          : 'grid-cols-2 sm:grid-cols-4'
+      )}
+    >
       <section className="min-w-0">
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
           {translate('auto.components.GitHubItemDialog.00ccdf9b5a', 'Status')}
@@ -101,6 +113,17 @@ export function GHEditSectionTopColumns({
           onOpenDuplicatePicker={onOpenDuplicatePicker}
         />
       </section>
+      {showRelationships ? (
+        <section className="min-w-0">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            {translate('auto.components.GitHubItemDialog.relationships', 'Relationships')}
+          </div>
+          <div className="mb-1.5 text-[12px] font-medium text-foreground">
+            {translate('auto.components.GitHubItemDialog.blockedBy', 'Blocked by')}
+          </div>
+          <GitHubIssueBlockedByRelationships item={item} />
+        </section>
+      ) : null}
       <GHEditSectionAssigneesColumn
         localAssignees={localAssignees}
         repoAssignees={repoAssignees}

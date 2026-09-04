@@ -16,8 +16,7 @@ import {
   ChevronDown,
   Plus,
   ExternalLink,
-  EllipsisVertical,
-  Ban
+  EllipsisVertical
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -43,6 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Button } from '@/components/ui/button'
+import { GitHubIssueBlockedListMarker } from '@/components/github/GitHubIssueBlockedIndicators'
 export function TaskPageGitHubRows({
   model
 }: {
@@ -126,34 +126,25 @@ export function TaskPageGitHubRows({
               )}
             >
               <div className={GITHUB_TASK_STICKY_ID_CELL_CLASS}>
-                {isTaskPageGitHubDraftPR(item) ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>{githubTaskIdPill}</TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>
-                      {translate('auto.components.TaskPage.054bf695cc', 'Draft')}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  githubTaskIdPill
-                )}
+                <div className="flex min-w-0 items-center gap-1.5">
+                  {isTaskPageGitHubDraftPR(item) ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{githubTaskIdPill}</TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={6}>
+                        {translate('auto.components.TaskPage.054bf695cc', 'Draft')}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    githubTaskIdPill
+                  )}
+                  {/* Why: GitHub's issues list puts the blocked marker beside the issue id/status, not after the title. */}
+                  <GitHubIssueBlockedListMarker item={item} />
+                </div>
               </div>
 
               <div className={GITHUB_TASK_STICKY_TITLE_CELL_CLASS}>
                 <div className="flex min-w-0 items-center gap-2">
                   <h3 className="truncate text-[13px] font-medium text-foreground">{item.title}</h3>
-                  {item.type === 'issue' && (item.blockedByCount ?? 0) > 0 ? (
-                    <span
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/30 px-1.5 py-0 text-[10px] text-muted-foreground"
-                      title={translate(
-                        'auto.components.TaskPage.blockedByCount',
-                        'Blocked by {{count}}',
-                        { count: item.blockedByCount ?? 0 }
-                      )}
-                    >
-                      <Ban className="size-2.5" aria-hidden="true" />
-                      {translate('auto.components.TaskPage.blocked', 'Blocked')}
-                    </span>
-                  ) : null}
                   {item.type === 'pr' && item.state !== 'open' && item.state !== 'draft' ? (
                     <TaskPageGitHubWorkItemStateBadge
                       item={item}

@@ -21,7 +21,7 @@ describe('mapIssueWorkItem blockedByCount', () => {
     expect(item.blockedByCount).toBe(2)
   })
 
-  it('maps gh blockedBy.totalCount', () => {
+  it('maps gh blockedBy nodes and totalCount', () => {
     const item = mapIssueWorkItem({
       number: 12,
       title: 'Blocked work',
@@ -30,9 +30,25 @@ describe('mapIssueWorkItem blockedByCount', () => {
       labels: [],
       updatedAt: '2026-03-29T00:00:00Z',
       author: { login: 'octocat' },
-      blockedBy: { totalCount: 1, nodes: [{ number: 11 }] }
+      blockedBy: {
+        totalCount: 1,
+        nodes: [
+          {
+            number: 11,
+            title: 'Schema migration',
+            url: 'https://github.com/acme/widgets/issues/11'
+          }
+        ]
+      }
     })
     expect(item.blockedByCount).toBe(1)
+    expect(item.blockedBy).toEqual([
+      {
+        number: 11,
+        title: 'Schema migration',
+        url: 'https://github.com/acme/widgets/issues/11'
+      }
+    ])
   })
 
   it('omits blockedByCount when the summary is absent', () => {

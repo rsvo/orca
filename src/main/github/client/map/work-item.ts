@@ -1,4 +1,5 @@
 import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubIssueBlockedByRef } from '../../../../shared/github/work-item-types'
 import {
   authorFieldsFromUnknown,
   extractHeadOwnerLogin,
@@ -11,6 +12,39 @@ import {
   deriveWorkItemCheckSummary,
   type MainWorkItem
 } from './work-item-field-coercion'
+
+function blockedByRefsFromUnknown(
+  item: Record<string, unknown>
+): GitHubIssueBlockedByRef[] | undefined {
+  const blockedBy = item.blockedBy
+  if (typeof blockedBy !== 'object' || blockedBy === null) {
+    return undefined
+  }
+  const nodes = (blockedBy as { nodes?: unknown }).nodes
+  if (!Array.isArray(nodes)) {
+    return undefined
+  }
+  const refs: GitHubIssueBlockedByRef[] = []
+  for (const node of nodes) {
+    if (typeof node !== 'object' || node === null) {
+      continue
+    }
+    const number = numberFromUnknown((node as { number?: unknown }).number)
+    if (number === undefined) {
+      continue
+    }
+    refs.push({
+      number,
+      title: String((node as { title?: unknown }).title ?? ''),
+      url: String(
+        (node as { url?: unknown; html_url?: unknown }).url ??
+          (node as { html_url?: unknown }).html_url ??
+          ''
+      )
+    })
+  }
+  return refs.length > 0 ? refs : undefined
+}
 
 function blockedByCountFromUnknown(item: Record<string, unknown>): number | undefined {
   const summary = item.issue_dependencies_summary ?? item.issueDependenciesSummary
@@ -26,13 +60,17 @@ function blockedByCountFromUnknown(item: Record<string, unknown>): number | unde
   // Why: `gh issue view/list --json blockedBy` returns `{ totalCount, nodes }`.
   const blockedBy = item.blockedBy
   if (typeof blockedBy === 'object' && blockedBy !== null) {
-    return numberFromUnknown((blockedBy as { totalCount?: unknown }).totalCount)
+    const total = numberFromUnknown((blockedBy as { totalCount?: unknown }).totalCount)
+    if (total !== undefined) {
+      return total
+    }
   }
-  return undefined
+  return blockedByRefsFromUnknown(item)?.length
 }
 
 export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
-  const blockedByCount = blockedByCountFromUnknown(item)
+  const blockedBy = blockedByRefsFromUnknown(item)
+  const blockedByCount = blockedByCountFromUnknown(item) ?? blockedBy?.length
   return {
     id: `issue:${String(item.number)}`,
     type: 'issue',
@@ -52,7 +90,8 @@ export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
     updatedAt: String(item.updated_at ?? item.updatedAt ?? ''),
     ...authorFieldsFromUnknown(item),
     ...(item.assignees !== undefined ? { assignees: usersFromUnknown(item.assignees) } : {}),
-    ...(blockedByCount !== undefined ? { blockedByCount } : {})
+    ...(blockedByCount !== undefined ? { blockedByCount } : {}),
+    ...(blockedBy !== undefined ? { blockedBy } : {})
   }
 }
 
