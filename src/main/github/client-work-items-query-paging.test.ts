@@ -229,7 +229,7 @@ describe('listWorkItems query paging', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=2`,
+        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=2&advanced_search=true`,
         '--jq',
         '.items'
       ],

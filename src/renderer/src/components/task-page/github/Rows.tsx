@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Plus,
   ExternalLink,
-  EllipsisVertical
+  EllipsisVertical,
+  Ban
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -140,6 +141,19 @@ export function TaskPageGitHubRows({
               <div className={GITHUB_TASK_STICKY_TITLE_CELL_CLASS}>
                 <div className="flex min-w-0 items-center gap-2">
                   <h3 className="truncate text-[13px] font-medium text-foreground">{item.title}</h3>
+                  {item.type === 'issue' && (item.blockedByCount ?? 0) > 0 ? (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/30 px-1.5 py-0 text-[10px] text-muted-foreground"
+                      title={translate(
+                        'auto.components.TaskPage.blockedByCount',
+                        'Blocked by {{count}}',
+                        { count: item.blockedByCount ?? 0 }
+                      )}
+                    >
+                      <Ban className="size-2.5" aria-hidden="true" />
+                      {translate('auto.components.TaskPage.blocked', 'Blocked')}
+                    </span>
+                  ) : null}
                   {item.type === 'pr' && item.state !== 'open' && item.state !== 'draft' ? (
                     <TaskPageGitHubWorkItemStateBadge
                       item={item}

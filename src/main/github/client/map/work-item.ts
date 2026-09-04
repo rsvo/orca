@@ -11,7 +11,28 @@ import {
   deriveWorkItemCheckSummary,
   type MainWorkItem
 } from './work-item-field-coercion'
+
+function blockedByCountFromUnknown(item: Record<string, unknown>): number | undefined {
+  const summary = item.issue_dependencies_summary ?? item.issueDependenciesSummary
+  if (typeof summary === 'object' && summary !== null) {
+    const count = numberFromUnknown(
+      (summary as { blocked_by?: unknown; blockedBy?: unknown }).blocked_by ??
+        (summary as { blockedBy?: unknown }).blockedBy
+    )
+    if (count !== undefined) {
+      return count
+    }
+  }
+  // Why: `gh issue view/list --json blockedBy` returns `{ totalCount, nodes }`.
+  const blockedBy = item.blockedBy
+  if (typeof blockedBy === 'object' && blockedBy !== null) {
+    return numberFromUnknown((blockedBy as { totalCount?: unknown }).totalCount)
+  }
+  return undefined
+}
+
 export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
+  const blockedByCount = blockedByCountFromUnknown(item)
   return {
     id: `issue:${String(item.number)}`,
     type: 'issue',
@@ -30,7 +51,8 @@ export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
       : [],
     updatedAt: String(item.updated_at ?? item.updatedAt ?? ''),
     ...authorFieldsFromUnknown(item),
-    ...(item.assignees !== undefined ? { assignees: usersFromUnknown(item.assignees) } : {})
+    ...(item.assignees !== undefined ? { assignees: usersFromUnknown(item.assignees) } : {}),
+    ...(blockedByCount !== undefined ? { blockedByCount } : {})
   }
 }
 

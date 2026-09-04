@@ -1,6 +1,38 @@
+import { isDefaultGitHubHost } from '../../../../shared/github/repository-identity-key'
 import type { ParsedTaskQuery } from '../../../../shared/task-query'
 // Why: issue numbers follow creation order, so this sort aligns gh's PR rows with numbered Search API issue pages.
 export const WORK_ITEM_NUMBER_SORT_QUALIFIER = 'sort:created-desc'
+
+/**
+ * Build a `search/issues` path. On github.com, pin advanced search so
+ * dependency qualifiers like `is:blocked` / `-is:blocked` are honored —
+ * classic lexical search silently ignores them (returns 0 / no-op).
+ * GHES keeps classic search: issue dependencies are github.com-only.
+ */
+export function buildIssueSearchIssuesApiPath(args: {
+  query: string
+  perPage: number
+  page?: number
+  sort?: 'created'
+  order?: 'desc' | 'asc'
+  host?: string
+}): string {
+  const params = [`q=${encodeURIComponent(args.query)}`]
+  if (args.sort) {
+    params.push(`sort=${args.sort}`)
+  }
+  if (args.order) {
+    params.push(`order=${args.order}`)
+  }
+  params.push(`per_page=${args.perPage}`)
+  if (args.page !== undefined) {
+    params.push(`page=${args.page}`)
+  }
+  if (isDefaultGitHubHost(args.host)) {
+    params.push('advanced_search=true')
+  }
+  return `search/issues?${params.join('&')}`
+}
 
 export function buildSearchQueryString(
   ownerRepo: { owner: string; repo: string },
@@ -25,6 +57,11 @@ export function buildSearchQueryString(
   }
   if (query.draft) {
     parts.push('draft:true')
+  }
+  if (query.blocked === true) {
+    parts.push('is:blocked')
+  } else if (query.blocked === false) {
+    parts.push('-is:blocked')
   }
   if (query.assignee) {
     parts.push(`assignee:${quoteGitHubSearchValue(query.assignee)}`)
@@ -56,6 +93,7 @@ export function defaultOpenWorkItemQuery(): ParsedTaskQuery {
     scope: 'all',
     state: 'open',
     draft: false,
+    blocked: null,
     assignee: null,
     author: null,
     reviewRequested: null,

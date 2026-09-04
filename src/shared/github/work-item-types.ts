@@ -49,6 +49,8 @@ export type GitHubWorkItem = {
   mergeMethodSettings?: GitHubPRMergeMethodSettings
   mergeStateStatus?: string | null
   maintainerCanModify?: boolean
+  /** Open blockers from GitHub issue dependencies. Absent when the host/API omits the summary. */
+  blockedByCount?: number
   // Why: true when a PR's head lives on a fork (headRepositoryOwner !== selected repo owner).
   // The Start-from picker passes this to resolvePrBase so fork heads use
   // refs/pull/<N>/head for creation and a separate PR-head push target.

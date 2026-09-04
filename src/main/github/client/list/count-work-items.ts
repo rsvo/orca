@@ -22,7 +22,11 @@ import {
 } from '../../rate-limit'
 import { sameOwnerRepo } from './../github-exec-scope'
 import { resolvePrWorkItemSource } from './work-item-list-request'
-import { buildSearchQueryString, defaultOpenWorkItemQuery } from './work-item-search-query'
+import {
+  buildIssueSearchIssuesApiPath,
+  buildSearchQueryString,
+  defaultOpenWorkItemQuery
+} from './work-item-search-query'
 export async function countWorkItemsForQuery(
   repoPath: string,
   ownerRepo: OwnerRepo,
@@ -40,7 +44,11 @@ export async function countWorkItemsForQuery(
       'api',
       '--cache',
       '120s',
-      `search/issues?q=${encodeURIComponent(searchQ)}&per_page=1`,
+      buildIssueSearchIssuesApiPath({
+        query: searchQ,
+        perPage: 1,
+        host: ownerRepo.host
+      }),
       '--jq',
       '.total_count'
     ],

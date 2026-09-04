@@ -264,7 +264,7 @@ describe('listWorkItems', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue assignee:@me')}&sort=created&order=desc&per_page=10&page=1`,
+        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue assignee:@me')}&sort=created&order=desc&per_page=10&page=1&advanced_search=true`,
         '--jq',
         '.items'
       ],
@@ -706,7 +706,7 @@ describe('listWorkItems', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=1`,
+        `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=1&advanced_search=true`,
         '--jq',
         '.items'
       ],
