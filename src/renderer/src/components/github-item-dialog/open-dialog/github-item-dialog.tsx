@@ -25,6 +25,7 @@ export default function GitHubItemDialog({
   backLabel = 'Back',
   projectOrigin,
   onUse,
+  onOpenWorkItem,
   onReviewRequestsChange,
   onClose
 }: GitHubItemDialogProps): React.JSX.Element {
@@ -151,6 +152,7 @@ export default function GitHubItemDialog({
           issueAttachedWorkspace={issueAttachedWorkspace}
           handleOpenOrUseIssueWorkspace={handleOpenOrUseIssueWorkspace}
           onUse={onUse}
+          onOpenWorkItem={onOpenWorkItem}
           localState={localState}
           effectiveRepoId={effectiveRepoId}
           repoPath={repoPath}

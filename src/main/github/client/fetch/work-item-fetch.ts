@@ -37,7 +37,38 @@ export async function fetchIssueWorkItem(
     if ('pull_request' in item) {
       return null
     }
-    return mapIssueWorkItem(item)
+    const mapped = mapIssueWorkItem(item)
+    // Why: REST only exposes issue_dependencies_summary counts; gh blockedBy nodes carry titles for the detail pill.
+    if ((mapped.blockedByCount ?? 0) > 0 && !mapped.blockedBy?.length) {
+      try {
+        const { stdout: blockedStdout } = await ghExecFileAsync(
+          [
+            'issue',
+            'view',
+            String(number),
+            '--repo',
+            `${ownerRepo.owner}/${ownerRepo.repo}`,
+            '--json',
+            'blockedBy'
+          ],
+          ghOptions
+        )
+        const blockedMapped = mapIssueWorkItem({
+          ...item,
+          ...(JSON.parse(blockedStdout) as Record<string, unknown>)
+        })
+        return {
+          ...mapped,
+          ...(blockedMapped.blockedByCount !== undefined
+            ? { blockedByCount: blockedMapped.blockedByCount }
+            : {}),
+          ...(blockedMapped.blockedBy !== undefined ? { blockedBy: blockedMapped.blockedBy } : {})
+        }
+      } catch {
+        return mapped
+      }
+    }
+    return mapped
   }
 
   if (connectionId) {

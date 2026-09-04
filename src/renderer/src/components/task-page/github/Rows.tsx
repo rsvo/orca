@@ -137,8 +137,6 @@ export function TaskPageGitHubRows({
                   ) : (
                     githubTaskIdPill
                   )}
-                  {/* Why: GitHub's issues list puts the blocked marker beside the issue id/status, not after the title. */}
-                  <GitHubIssueBlockedListMarker item={item} />
                 </div>
               </div>
 
@@ -162,6 +160,8 @@ export function TaskPageGitHubRows({
                   ) : null}
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-muted-foreground">
+                  {/* Why: github.com puts Blocked in the metadata row, not beside the #id pill. */}
+                  <GitHubIssueBlockedListMarker item={item} />
                   <span>
                     {item.author ??
                       translate('auto.components.TaskPage.6430594b18', 'unknown author')}
