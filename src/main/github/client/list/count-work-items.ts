@@ -25,7 +25,8 @@ import { resolvePrWorkItemSource } from './work-item-list-request'
 import {
   buildIssueSearchIssuesApiPath,
   buildSearchQueryString,
-  defaultOpenWorkItemQuery
+  defaultOpenWorkItemQuery,
+  shouldEmitBlockedSearchQualifier
 } from './work-item-search-query'
 export async function countWorkItemsForQuery(
   repoPath: string,
@@ -35,6 +36,11 @@ export async function countWorkItemsForQuery(
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<number> {
   const searchQ = buildSearchQueryString(ownerRepo, query)
+  const blockedQualifier = shouldEmitBlockedSearchQualifier({
+    host: ownerRepo.host,
+    forIssues: query.scope !== 'pr',
+    blocked: query.blocked
+  })
   const ghOptions = {
     ...ghRepoExecOptions(githubRepoContext(repoPath, connectionId, localGitOptions)),
     ...githubHostExecOptions(ownerRepo)
@@ -47,7 +53,8 @@ export async function countWorkItemsForQuery(
       buildIssueSearchIssuesApiPath({
         query: searchQ,
         perPage: 1,
-        host: ownerRepo.host
+        host: ownerRepo.host,
+        blockedQualifier
       }),
       '--jq',
       '.total_count'

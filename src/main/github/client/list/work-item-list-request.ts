@@ -54,13 +54,12 @@ export function buildWorkItemListRequest(args: {
   }
 
   // Why: blocked-by is issue-only; gh pr list --search never gets advanced_search.
-  if (
-    shouldEmitBlockedSearchQualifier({
-      host: ownerRepo.host,
-      forIssues: kind === 'issue',
-      blocked: query.blocked
-    })
-  ) {
+  const blockedQualifier = shouldEmitBlockedSearchQualifier({
+    host: ownerRepo.host,
+    forIssues: kind === 'issue',
+    blocked: query.blocked
+  })
+  if (blockedQualifier) {
     searchParts.push(query.blocked === true ? 'is:blocked' : '-is:blocked')
   }
 
@@ -97,7 +96,8 @@ export function buildWorkItemListRequest(args: {
           order: 'desc',
           perPage: limit,
           page,
-          host: ownerRepo.host
+          host: ownerRepo.host,
+          blockedQualifier
         }),
         '--jq',
         '.items'

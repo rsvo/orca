@@ -9,7 +9,7 @@ import {
 } from './work-item-search-query'
 
 describe('buildIssueSearchIssuesApiPath', () => {
-  it('pins advanced_search on github.com so is:blocked is honored', () => {
+  it('pins advanced_search on github.com only when a blocked qualifier is present', () => {
     expect(
       buildIssueSearchIssuesApiPath({
         query: 'repo:acme/widgets is:issue is:open',
@@ -19,18 +19,33 @@ describe('buildIssueSearchIssuesApiPath', () => {
         page: 1
       })
     ).toBe(
-      `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=1&advanced_search=true`
+      `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&sort=created&order=desc&per_page=10&page=1`
+    )
+    expect(
+      buildIssueSearchIssuesApiPath({
+        query: 'repo:acme/widgets is:issue is:open is:blocked',
+        sort: 'created',
+        order: 'desc',
+        perPage: 10,
+        page: 1,
+        blockedQualifier: true
+      })
+    ).toBe(
+      `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open is:blocked')}&sort=created&order=desc&per_page=10&page=1&advanced_search=true`
     )
   })
 
-  it('omits advanced_search on GHES hosts', () => {
+  it('omits advanced_search on GHES hosts even with a blocked qualifier', () => {
     expect(
       buildIssueSearchIssuesApiPath({
-        query: 'repo:acme/widgets is:issue is:open',
+        query: 'repo:acme/widgets is:issue is:open is:blocked',
         perPage: 1,
-        host: 'ghe.example.com'
+        host: 'ghe.example.com',
+        blockedQualifier: true
       })
-    ).toBe(`search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open')}&per_page=1`)
+    ).toBe(
+      `search/issues?q=${encodeURIComponent('repo:acme/widgets is:issue is:open is:blocked')}&per_page=1`
+    )
   })
 })
 
@@ -95,9 +110,9 @@ describe('buildWorkItemListRequest blocked qualifiers', () => {
       query: blockedQuery,
       page: 1
     })
-    expect(issueRequest.args.join(' ')).toContain(
-      encodeURIComponent('repo:acme/widgets is:issue is:open is:blocked')
-    )
+    const issueArgs = issueRequest.args.join(' ')
+    expect(issueArgs).toContain(encodeURIComponent('repo:acme/widgets is:issue is:open is:blocked'))
+    expect(issueArgs).toContain('advanced_search=true')
 
     const prRequest = buildWorkItemListRequest({
       kind: 'pr',
@@ -115,6 +130,17 @@ describe('buildWorkItemListRequest blocked qualifiers', () => {
       query: blockedQuery,
       page: 1
     })
-    expect(ghesRequest.args.join(' ')).not.toContain('is:blocked')
+    const ghesArgs = ghesRequest.args.join(' ')
+    expect(ghesArgs).not.toContain('is:blocked')
+    expect(ghesArgs).not.toContain('advanced_search=true')
+
+    const openOnly = buildWorkItemListRequest({
+      kind: 'issue',
+      ownerRepo,
+      limit: 10,
+      query: parseTaskQuery('is:open'),
+      page: 1
+    })
+    expect(openOnly.args.join(' ')).not.toContain('advanced_search=true')
   })
 })

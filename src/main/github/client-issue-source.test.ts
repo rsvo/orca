@@ -102,7 +102,7 @@ function issueSearchArgs(
   return [
     'api',
     ...(options.noCache ? [] : ['--cache', '120s']),
-    `search/issues?q=${encodeURIComponent(`repo:${ownerRepo} ${query}`)}&sort=created&order=desc&per_page=10&page=1&advanced_search=true`,
+    `search/issues?q=${encodeURIComponent(`repo:${ownerRepo} ${query}`)}&sort=created&order=desc&per_page=10&page=1`,
     '--jq',
     '.items'
   ]
@@ -372,7 +372,7 @@ describe('GitHub issue source split', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:pull-request is:open')}&per_page=1&advanced_search=true`,
+        `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:pull-request is:open')}&per_page=1`,
         '--jq',
         '.total_count'
       ],
@@ -421,7 +421,7 @@ describe('GitHub issue source split', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:issue is:open')}&per_page=1&advanced_search=true`,
+        `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:issue is:open')}&per_page=1`,
         '--jq',
         '.total_count'
       ],
@@ -433,7 +433,7 @@ describe('GitHub issue source split', () => {
         'api',
         '--cache',
         '120s',
-        `search/issues?q=${encodeURIComponent('repo:fork/orca is:pull-request is:open')}&per_page=1&advanced_search=true`,
+        `search/issues?q=${encodeURIComponent('repo:fork/orca is:pull-request is:open')}&per_page=1`,
         '--jq',
         '.total_count'
       ],
@@ -788,7 +788,7 @@ describe('GitHub issue source split', () => {
           'api',
           '--cache',
           '120s',
-          `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:open')}&per_page=1&advanced_search=true`,
+          `search/issues?q=${encodeURIComponent('repo:stablyai/orca is:open')}&per_page=1`,
           '--jq',
           '.total_count'
         ],

@@ -4,10 +4,11 @@ import type { ParsedTaskQuery } from '../../../../shared/task-query'
 export const WORK_ITEM_NUMBER_SORT_QUALIFIER = 'sort:created-desc'
 
 /**
- * Build a `search/issues` path. On github.com, pin advanced search so
- * dependency qualifiers like `is:blocked` / `-is:blocked` are honored —
- * classic lexical search reinterprets them as free text (spurious matches).
- * GHES keeps classic search: issue dependencies are github.com-only.
+ * Build a `search/issues` path. On github.com, pin advanced search only when
+ * a dependency qualifier (`is:blocked` / `-is:blocked`) is present — classic
+ * lexical search reinterprets those as free text (spurious matches). Leave
+ * ordinary queries on classic search so result sets stay unchanged.
+ * GHES never gets advanced search: issue dependencies are github.com-only.
  */
 export function buildIssueSearchIssuesApiPath(args: {
   query: string
@@ -16,6 +17,8 @@ export function buildIssueSearchIssuesApiPath(args: {
   sort?: 'created'
   order?: 'desc' | 'asc'
   host?: string
+  /** True when the query includes an is:blocked / -is:blocked qualifier. */
+  blockedQualifier?: boolean
 }): string {
   const params = [`q=${encodeURIComponent(args.query)}`]
   if (args.sort) {
@@ -28,7 +31,7 @@ export function buildIssueSearchIssuesApiPath(args: {
   if (args.page !== undefined) {
     params.push(`page=${args.page}`)
   }
-  if (isDefaultGitHubHost(args.host)) {
+  if (args.blockedQualifier && isDefaultGitHubHost(args.host)) {
     params.push('advanced_search=true')
   }
   return `search/issues?${params.join('&')}`
