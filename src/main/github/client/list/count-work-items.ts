@@ -91,6 +91,11 @@ export async function countWorkItems(
 
   const parsedQuery = trimmedQuery ? parseTaskQuery(trimmedQuery) : null
   const effectiveQuery = parsedQuery ?? defaultOpenWorkItemQuery()
+  // Why: is:blocked is issue-only, so an is:pr is:blocked query matches nothing;
+  // return 0 rather than the unqualified PR count (listQueriedWorkItems skips both halves).
+  if (effectiveQuery.scope === 'pr' && effectiveQuery.blocked === true) {
+    return 0
+  }
   const ghOptions = {
     ...ghRepoExecOptions(githubRepoContext(repoPath, connectionId, localGitOptions)),
     ...githubHostExecOptions(ownerRepo)
