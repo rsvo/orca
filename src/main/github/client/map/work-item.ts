@@ -13,6 +13,15 @@ import {
   type MainWorkItem
 } from './work-item-field-coercion'
 
+function isOpenBlockedByNode(node: { state?: unknown; closed?: unknown }): boolean {
+  if (typeof node.closed === 'boolean') {
+    return !node.closed
+  }
+  const state = String(node.state ?? '').toLowerCase()
+  // Why: absent state means we cannot prove closed; treat as open so badges do not under-report.
+  return state === '' || state === 'open'
+}
+
 function blockedByRefsFromUnknown(
   item: Record<string, unknown>
 ): GitHubIssueBlockedByRef[] | undefined {
@@ -29,18 +38,25 @@ function blockedByRefsFromUnknown(
     if (typeof node !== 'object' || node === null) {
       continue
     }
-    const number = numberFromUnknown((node as { number?: unknown }).number)
+    const blocker = node as {
+      number?: unknown
+      title?: unknown
+      url?: unknown
+      html_url?: unknown
+      state?: unknown
+      closed?: unknown
+    }
+    if (!isOpenBlockedByNode(blocker)) {
+      continue
+    }
+    const number = numberFromUnknown(blocker.number)
     if (number === undefined) {
       continue
     }
     refs.push({
       number,
-      title: String((node as { title?: unknown }).title ?? ''),
-      url: String(
-        (node as { url?: unknown; html_url?: unknown }).url ??
-          (node as { html_url?: unknown }).html_url ??
-          ''
-      )
+      title: String(blocker.title ?? ''),
+      url: String(blocker.url ?? blocker.html_url ?? '')
     })
   }
   return refs.length > 0 ? refs : undefined
@@ -49,6 +65,7 @@ function blockedByRefsFromUnknown(
 function blockedByCountFromUnknown(item: Record<string, unknown>): number | undefined {
   const summary = item.issue_dependencies_summary ?? item.issueDependenciesSummary
   if (typeof summary === 'object' && summary !== null) {
+    // Why: summary.blockedBy / blocked_by is open blockers only; totalBlockedBy includes closed.
     const count = numberFromUnknown(
       (summary as { blocked_by?: unknown; blockedBy?: unknown }).blocked_by ??
         (summary as { blockedBy?: unknown }).blockedBy
@@ -57,15 +74,16 @@ function blockedByCountFromUnknown(item: Record<string, unknown>): number | unde
       return count
     }
   }
-  // Why: `gh issue view/list --json blockedBy` returns `{ totalCount, nodes }`.
+  // Why: do not use blockedBy.totalCount — it includes closed blockers and would keep the badge.
   const blockedBy = item.blockedBy
-  if (typeof blockedBy === 'object' && blockedBy !== null) {
-    const total = numberFromUnknown((blockedBy as { totalCount?: unknown }).totalCount)
-    if (total !== undefined) {
-      return total
-    }
+  if (typeof blockedBy !== 'object' || blockedBy === null) {
+    return undefined
   }
-  return blockedByRefsFromUnknown(item)?.length
+  const nodes = (blockedBy as { nodes?: unknown }).nodes
+  if (!Array.isArray(nodes)) {
+    return undefined
+  }
+  return blockedByRefsFromUnknown(item)?.length ?? 0
 }
 
 export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
