@@ -1,4 +1,5 @@
 import type { IssueSourcePreference } from '../../../../shared/repo-types'
+import { isDefaultGitHubHost } from '../../../../shared/github/repository-identity-key'
 import {
   ghExecFileAsync,
   classifyGhError,
@@ -17,6 +18,47 @@ import {
   type MainWorkItem
 } from './../map/work-item-field-coercion'
 import { mapIssueWorkItem, mapPullRequestWorkItem } from './../map/work-item'
+
+const ISSUE_VIEW_BASE_JSON_FIELDS = 'number,title,state,url,labels,updatedAt,author'
+
+function isUnknownJsonFieldError(message: string): boolean {
+  return /unknown json field/i.test(message)
+}
+
+/** Why: blockedBy is github.com-only and mid-2026+ gh; ambient GH_HOST on the no-repo path may be GHES. */
+function shouldRequestIssueBlockedByField(ownerRepo: GitHubApiRepository | null): boolean {
+  return ownerRepo !== null && isDefaultGitHubHost(ownerRepo.host)
+}
+
+async function fetchIssueBlockedByNodes(args: {
+  number: number
+  ownerRepo: GitHubApiRepository
+  ghOptions: GhExecOptions
+}): Promise<Record<string, unknown>> {
+  try {
+    const { stdout } = await ghExecFileAsync(
+      [
+        'issue',
+        'view',
+        String(args.number),
+        '--repo',
+        `${args.ownerRepo.owner}/${args.ownerRepo.repo}`,
+        '--json',
+        'blockedBy'
+      ],
+      args.ghOptions
+    )
+    return JSON.parse(stdout) as Record<string, unknown>
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    // Why: older gh rejects blockedBy; degrade to REST counts instead of failing the issue fetch.
+    if (isUnknownJsonFieldError(message)) {
+      return {}
+    }
+    throw err
+  }
+}
+
 export async function fetchIssueWorkItem(
   repoPath: string,
   ownerRepo: GitHubApiRepository | null,
@@ -39,23 +81,15 @@ export async function fetchIssueWorkItem(
     }
     const mapped = mapIssueWorkItem(item)
     // Why: REST only exposes issue_dependencies_summary counts; gh blockedBy nodes carry titles for the detail pill.
-    if ((mapped.blockedByCount ?? 0) > 0 && !mapped.blockedBy?.length) {
+    if (
+      shouldRequestIssueBlockedByField(ownerRepo) &&
+      (mapped.blockedByCount ?? 0) > 0 &&
+      !mapped.blockedBy?.length
+    ) {
       try {
-        const { stdout: blockedStdout } = await ghExecFileAsync(
-          [
-            'issue',
-            'view',
-            String(number),
-            '--repo',
-            `${ownerRepo.owner}/${ownerRepo.repo}`,
-            '--json',
-            'blockedBy'
-          ],
-          ghOptions
-        )
         const blockedMapped = mapIssueWorkItem({
           ...item,
-          ...(JSON.parse(blockedStdout) as Record<string, unknown>)
+          ...(await fetchIssueBlockedByNodes({ number, ownerRepo, ghOptions }))
         })
         return {
           ...mapped,
@@ -77,14 +111,9 @@ export async function fetchIssueWorkItem(
     return null
   }
 
+  // Why: unresolved host can target GHES via ambient GH_HOST; omit blockedBy (github.com-only).
   const { stdout } = await ghExecFileAsync(
-    [
-      'issue',
-      'view',
-      String(number),
-      '--json',
-      'number,title,state,url,labels,updatedAt,author,blockedBy'
-    ],
+    ['issue', 'view', String(number), '--json', ISSUE_VIEW_BASE_JSON_FIELDS],
     ghOptions
   )
   return mapIssueWorkItem(JSON.parse(stdout) as Record<string, unknown>)
