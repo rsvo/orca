@@ -11,7 +11,8 @@ import { WORK_ITEM_PR_LIST_JSON_FIELDS, type MainWorkItem } from './../map/work-
 import {
   WORK_ITEM_NUMBER_SORT_QUALIFIER,
   buildIssueSearchIssuesApiPath,
-  quoteGitHubSearchValue
+  quoteGitHubSearchValue,
+  shouldEmitBlockedSearchQualifier
 } from './work-item-search-query'
 export type WorkItemListRequest = {
   args: string[]
@@ -52,10 +53,15 @@ export function buildWorkItemListRequest(args: {
     searchParts.push('draft:true')
   }
 
-  if (query.blocked === true) {
-    searchParts.push('is:blocked')
-  } else if (query.blocked === false) {
-    searchParts.push('-is:blocked')
+  // Why: blocked-by is issue-only; gh pr list --search never gets advanced_search.
+  if (
+    shouldEmitBlockedSearchQualifier({
+      host: ownerRepo.host,
+      forIssues: kind === 'issue',
+      blocked: query.blocked
+    })
+  ) {
+    searchParts.push(query.blocked === true ? 'is:blocked' : '-is:blocked')
   }
 
   if (query.assignee) {

@@ -6,7 +6,7 @@ export const WORK_ITEM_NUMBER_SORT_QUALIFIER = 'sort:created-desc'
 /**
  * Build a `search/issues` path. On github.com, pin advanced search so
  * dependency qualifiers like `is:blocked` / `-is:blocked` are honored —
- * classic lexical search silently ignores them (returns 0 / no-op).
+ * classic lexical search reinterprets them as free text (spurious matches).
  * GHES keeps classic search: issue dependencies are github.com-only.
  */
 export function buildIssueSearchIssuesApiPath(args: {
@@ -34,8 +34,18 @@ export function buildIssueSearchIssuesApiPath(args: {
   return `search/issues?${params.join('&')}`
 }
 
+/** Why: blocked-by is issue-only and only honored under github.com advanced search. */
+export function shouldEmitBlockedSearchQualifier(args: {
+  host?: string
+  /** Issue list/count paths only; PR search never gets advanced_search. */
+  forIssues: boolean
+  blocked: boolean | null
+}): boolean {
+  return args.forIssues && args.blocked !== null && isDefaultGitHubHost(args.host)
+}
+
 export function buildSearchQueryString(
-  ownerRepo: { owner: string; repo: string },
+  ownerRepo: { owner: string; repo: string; host?: string },
   query: ParsedTaskQuery
 ): string {
   const parts: string[] = [`repo:${ownerRepo.owner}/${ownerRepo.repo}`]
@@ -58,10 +68,14 @@ export function buildSearchQueryString(
   if (query.draft) {
     parts.push('draft:true')
   }
-  if (query.blocked === true) {
-    parts.push('is:blocked')
-  } else if (query.blocked === false) {
-    parts.push('-is:blocked')
+  if (
+    shouldEmitBlockedSearchQualifier({
+      host: ownerRepo.host,
+      forIssues: query.scope !== 'pr',
+      blocked: query.blocked
+    })
+  ) {
+    parts.push(query.blocked === true ? 'is:blocked' : '-is:blocked')
   }
   if (query.assignee) {
     parts.push(`assignee:${quoteGitHubSearchValue(query.assignee)}`)

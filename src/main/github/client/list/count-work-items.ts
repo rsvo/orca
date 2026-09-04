@@ -115,6 +115,8 @@ export async function countWorkItems(
       effectiveQuery.draft ||
       effectiveQuery.reviewRequested !== null ||
       effectiveQuery.reviewedBy !== null
+    // Why: is:blocked is issue-only; counting PRs under it would inflate or free-text-match.
+    const skipPrForBlockedInclude = effectiveQuery.blocked === true
     if (
       effectiveQuery.scope !== 'pr' &&
       effectiveQuery.state !== 'merged' &&
@@ -131,7 +133,7 @@ export async function countWorkItems(
         )
       )
     }
-    if (effectiveQuery.scope !== 'issue' && prOwnerRepo) {
+    if (effectiveQuery.scope !== 'issue' && !skipPrForBlockedInclude && prOwnerRepo) {
       counts.push(
         countWorkItemsForQuery(
           repoPath,
